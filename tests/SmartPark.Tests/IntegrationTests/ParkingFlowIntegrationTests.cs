@@ -1,3 +1,4 @@
+using System.Linq;
 using Moq;
 using SmartPark.Core.Interfaces;
 using SmartPark.Core.Models;
@@ -74,17 +75,103 @@ public class ParkingFlowIntegrationTests
 
     #region Full Parking Flow
     // End-to-end scenarios from check-in through check-out
+
+    [Fact]
+	public async Task LostTicketDuringGracePeriod_Returns20000AndClosesTicket()
+	{
+    	var ticket = await _manager.CheckInAsync("CAR1", VehicleType.Car);
+
+    	_currentTime = _currentTime.AddMinutes(10);
+
+    	var result = await _manager.CheckOutAsync(ticket.TicketId, "111", true, false);
+
+    	Assert.Equal(20000m, result.TotalFee);
+
+    	var active = await _repository.GetAllActiveTicketsAsync();
+    	Assert.Empty(active);
+	}
+
     #endregion
 
     #region Multiple Vehicles
     // Test concurrent parking sessions and their lifecycle
+
+    [Fact]
+	public async Task MultipleVehicles_CheckIn3_CheckOut1_Remain2Active()
+	{
+    	var t1 = await _manager.CheckInAsync("CAR1", VehicleType.Car);
+    	await _manager.CheckInAsync("CAR2", VehicleType.Car);
+    	await _manager.CheckInAsync("CAR3", VehicleType.Car);
+
+    	_currentTime = _currentTime.AddHours(2);
+
+    	await _manager.CheckOutAsync(t1.TicketId, "111", false, false);
+
+    	var active = await _repository.GetAllActiveTicketsAsync();
+
+    	Assert.Equal(2, active.Count());
+	}
+
     #endregion
 
     #region Error Recovery
     // Test system state consistency after error conditions
+
+    [Fact]
+	public async Task DuplicateCheckIn_ThrowsException_NoNewTicket()
+	{
+    	await _manager.CheckInAsync("CAR1", VehicleType.Car);
+
+    	await Assert.ThrowsAsync<InvalidOperationException>(() =>
+        	_manager.CheckInAsync("CAR1", VehicleType.Car)
+    	);
+	}
+
+	[Fact]
+	public async Task PaymentFailure_CheckOut_ThrowsException_TicketStillActive()
+	{
+    	_paymentStub.Setup(p =>
+        	p.ProcessPaymentAsync(It.IsAny<string>(), It.IsAny<decimal>())
+    	).ReturnsAsync(false);
+
+    	var ticket = await _manager.CheckInAsync("CAR1", VehicleType.Car);
+
+    	_currentTime = _currentTime.AddHours(2);
+
+    	await Assert.ThrowsAsync<Exception>(() =>
+        	_manager.CheckOutAsync(ticket.TicketId, "111", false, false)
+    	);
+
+    	var active = await _repository.GetAllActiveTicketsAsync();
+
+    	Assert.Single(active);
+	}
+
     #endregion
 
     #region Edge-to-Edge Scenarios
     // Test complex combinations of fee modifiers working together
+
+    [Fact]
+	public async Task NotificationFailure_CheckOutStillSucceeds()
+	{
+    	_notificationStub.Setup(n =>
+        	n.SendReceiptAsync(It.IsAny<string>(), It.IsAny<string>())
+    	).ThrowsAsync(new Exception());
+
+    	var ticket = await _manager.CheckInAsync("CAR1", VehicleType.Car);
+
+    	_currentTime = _currentTime.AddHours(2);
+
+    	var result = await _manager.CheckOutAsync(ticket.TicketId, "111", false, false);
+
+    	Assert.NotNull(result);
+
+    	var active = await _repository.GetAllActiveTicketsAsync();
+
+    	Assert.Empty(active);
+	}
+
+
     #endregion
 }
