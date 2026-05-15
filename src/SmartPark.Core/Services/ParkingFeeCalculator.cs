@@ -62,7 +62,23 @@ public class ParkingFeeCalculator
     {
         // TODO: Implement the 9-step fee calculation using TDD.
         // Write a failing test first (RED), then implement just enough to pass (GREEN).
-        throw new NotImplementedException(
-            "Implement this method using TDD — see the assignment spec for the 9-step calculation flow.");
+        
+
+{
+    if (checkOut < checkIn)
+        throw new ArgumentException();
+
+    if (checkOut == checkIn)
+    {
+        return new ParkingFeeResult
+        {
+            TotalFee = 0m
+        };
+    }
+
+    // Temporary placeholder for future TDD steps
+    throw new NotImplementedException();
+}
+
     }
 }
