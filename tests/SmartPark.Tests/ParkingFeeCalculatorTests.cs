@@ -122,6 +122,25 @@ public void CalculateFee_CarExceedsDailyCap_Returns8000()
 
     #region Overnight Fee
     // Test the flat fee applied for sessions that extend into late hours
+      [Fact]
+public void CalculateFee_Past10PM_AddsOvernightFee()
+{
+    // Arrange
+    var checkIn = new DateTime(2026, 3, 16, 20, 0, 0); // 8:00 PM
+    var checkOut = new DateTime(2026, 3, 16, 23, 0, 0); // 11:00 PM
+
+    // Act
+    var result = _calculator.CalculateFee(
+        VehicleType.Car,
+        MembershipTier.Guest,
+        checkIn,
+        checkOut
+    );
+
+    // Assert
+    // 3 hours = 3000 + 2000 overnight
+    Assert.Equal(5000m, result.TotalFee);
+}
     #endregion
 
     #region Weekend Surcharge
