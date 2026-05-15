@@ -207,6 +207,29 @@ public void CalculateFee_Weekend_Adds20PercentSurcharge()
 
     #region Holiday Surcharge
     // Test holiday pricing and its interaction with weekend pricing
+    [Fact]
+public void CalculateFee_Holiday_Adds50PercentSurcharge()
+{
+    // Arrange
+    var checkIn = new DateTime(2026, 3, 16, 10, 0, 0); // Monday
+    var checkOut = checkIn.AddHours(2); // 2 hours
+    bool isHoliday = true;
+
+    // Act
+    var result = _calculator.CalculateFee(
+        VehicleType.Car,
+        MembershipTier.Guest,
+        checkIn,
+        checkOut,
+        isLostTicket: false,
+        isHoliday: isHoliday
+    );
+
+    // Assert
+    // Base fee = 2h × 1000 = 2000
+    // Holiday surcharge = 50% = 1000
+    Assert.Equal(3000m, result.TotalFee);
+}
     #endregion
 
     #region Membership Discounts
