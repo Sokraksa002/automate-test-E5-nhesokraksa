@@ -183,6 +183,26 @@ public void CalculateFee_CheckInAfter10PM_CheckOutNextMorning_AddsOvernightFee()
 
     #region Weekend Surcharge
     // Test the percentage-based surcharge on specific days
+    [Fact]
+public void CalculateFee_Weekend_Adds20PercentSurcharge()
+{
+    // Arrange
+    var checkIn = new DateTime(2026, 3, 14, 10, 0, 0); // Saturday
+    var checkOut = checkIn.AddHours(2); // 2 hours
+
+    // Act
+    var result = _calculator.CalculateFee(
+        VehicleType.Car,
+        MembershipTier.Guest,
+        checkIn,
+        checkOut
+    );
+
+    // Assert
+    // Base fee = 2h × 1000 = 2000
+    // Weekend surcharge = 20% = 400
+    Assert.Equal(2400m, result.TotalFee);
+}
     #endregion
 
     #region Holiday Surcharge
