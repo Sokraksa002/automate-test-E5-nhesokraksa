@@ -24,34 +24,33 @@ public class ParkingFeeCalculator
         if (checkOut < checkIn)
             throw new ArgumentException();
 
-        // 2. Duration
         var totalMinutes = (checkOut - checkIn).TotalMinutes;
 
-        // 3. Grace period
+        // 2. Grace period
         if (totalMinutes <= GracePeriodMinutes)
         {
             return new ParkingFeeResult { TotalFee = 0m };
         }
 
-        // 4. Duration rounding
+        // 3. Duration rounding
         var billableMinutes = totalMinutes - GracePeriodMinutes;
         var billableHours = Math.Ceiling(billableMinutes / 60.0);
         decimal totalFee = (decimal)billableHours * CarRatePerHour;
 
-        // 5. Daily cap
+        // 4. Daily cap
         if (totalFee > CarDailyCap)
         {
             totalFee = CarDailyCap;
         }
 
-        // 6. Overnight fee
+        // 5. Overnight fee
         if (checkIn.Hour >= OvernightHourThreshold ||
             checkOut.Hour >= OvernightHourThreshold)
         {
             totalFee += OvernightFee;
         }
 
-        // 7. Surcharge (IMPORTANT: holiday overrides weekend)
+        // 6. Surcharge (holiday overrides weekend)
         if (isHoliday)
         {
             totalFee += totalFee * HolidaySurchargeRate;
@@ -61,6 +60,18 @@ public class ParkingFeeCalculator
         {
             totalFee += totalFee * WeekendSurchargeRate;
         }
+
+        //  7. Membership discount (FIXED position)
+        decimal discountRate = membership switch
+        {
+            MembershipTier.Silver => 0.10m,
+            MembershipTier.Gold => 0.25m,
+            MembershipTier.Platinum => 0.40m,
+            _ => 0m
+        };
+
+        decimal discount = totalFee * discountRate;
+        totalFee -= discount;
 
         return new ParkingFeeResult
         {
