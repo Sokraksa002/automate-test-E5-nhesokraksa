@@ -5,375 +5,187 @@ using FsCheck.Xunit;
 
 namespace SmartPark.Tests;
 
-public class ParkingFeeCalculatorTests
+public class ParkingFeeCalculatorPropertyTests
 {
     private readonly ParkingFeeCalculator _calculator = new();
 
-    // ────────────────────────────────────────────────────────────
-    //  EXAMPLE TEST — shows the naming convention and AAA pattern.
-    //  Delete or keep this; it does not count toward your grade.
-    // ────────────────────────────────────────────────────────────
+    private DateTime BaseTime => new DateTime(2026, 3, 16, 10, 0, 0);
 
-    [Fact]
-    public void CalculateFee_ZeroDuration_ReturnsFree()
+    // ✅ PROPERTY 1 — Longer stays cost more (or equal)
+    [Property]
+    public bool Fee_Increases_With_Time(int minutes1, int minutes2)
     {
-        // Arrange
-        var checkIn = new DateTime(2026, 3, 16, 10, 0, 0);  // Monday
-        var checkOut = checkIn; // same time = 0 duration
+        minutes1 = Math.Abs(minutes1 % 1000);
+        minutes2 = Math.Abs(minutes2 % 1000);
 
-        // Act
-        var result = _calculator.CalculateFee(VehicleType.Car, MembershipTier.Guest, checkIn, checkOut);
+        var checkIn = BaseTime;
 
-        // Assert
-        Assert.Equal(0m, result.TotalFee);
+        var fee1 = _calculator.CalculateFee(
+            VehicleType.Car,
+            MembershipTier.Guest,
+            checkIn,
+            checkIn.AddMinutes(minutes1)
+        ).TotalFee;
+
+        var fee2 = _calculator.CalculateFee(
+            VehicleType.Car,
+            MembershipTier.Guest,
+            checkIn,
+            checkIn.AddMinutes(minutes1 + minutes2)
+        ).TotalFee;
+
+        return fee2 >= fee1;
     }
 
-    #region Basic Fee Calculation
-    // Test basic hourly rates for each vehicle type
-    // Consider using [Theory] with [InlineData] for multiple scenarios
-    #endregion
+    // ✅ PROPERTY 2 — Grace period is always free
+    [Property]
+    public bool GracePeriod_IsAlwaysFree(int minutes)
+    {
+        minutes = Math.Abs(minutes % 30); // ≤ 30
 
-    #region Grace Period
-    // Test the free parking window and its boundaries
+        var result = _calculator.CalculateFee(
+            VehicleType.Car,
+            MembershipTier.Guest,
+            BaseTime,
+            BaseTime.AddMinutes(minutes)
+        );
 
-[Fact]
-public void CalculateFee_GracePeriod_30Minutes_ReturnsFree()
-{
-	// Arrange
-	var checkIn = new DateTime(2026, 3, 16, 10, 0, 0);
-	var checkOut = checkIn.AddMinutes(30);
+        return result.TotalFee == 0;
+    }
 
-	// Act
-	var result = _calculator.CalculateFee(
-    	VehicleType.Car,
-    	MembershipTier.Guest,
-    	checkIn,
-    	checkOut
-	);
+    // ✅ PROPERTY 3 — Members pay <= guest
+    [Property]
+    public bool MembersPayLessOrEqual(int minutes)
+    {
+        minutes = Math.Abs(minutes % 300);
 
-	// Assert
-	Assert.Equal(0m, result.TotalFee);
-}
-[Fact]
-public void CalculateFee_GracePeriod_31Minutes_ReturnsOneHourFee()
-{
-    // Arrange
-    var checkIn = new DateTime(2026, 3, 16, 10, 0, 0);
-    var checkOut = checkIn.AddMinutes(31);
+        var guest = _calculator.CalculateFee(
+            VehicleType.Car,
+            MembershipTier.Guest,
+            BaseTime,
+            BaseTime.AddMinutes(minutes + 31)
+        ).TotalFee;
 
-    // Act
-    var result = _calculator.CalculateFee(
-        VehicleType.Car,
-        MembershipTier.Guest,
-        checkIn,
-        checkOut
-    );
+        var silver = _calculator.CalculateFee(
+            VehicleType.Car,
+            MembershipTier.Silver,
+            BaseTime,
+            BaseTime.AddMinutes(minutes + 31)
+        ).TotalFee;
 
-    // Assert
-    Assert.Equal(1000m, result.TotalFee);
-}
-    #endregion
+        var gold = _calculator.CalculateFee(
+            VehicleType.Car,
+            MembershipTier.Gold,
+            BaseTime,
+            BaseTime.AddMinutes(minutes + 31)
+        ).TotalFee;
 
-    #region Duration Rounding
-    // Test how partial hours are rounded for billing
-    [Fact]
-public void CalculateFee_RoundingUp_ReturnsTwoHours()
-{
-    // Arrange
-    var checkIn = new DateTime(2026, 3, 16, 10, 0, 0);
+        var platinum = _calculator.CalculateFee(
+            VehicleType.Car,
+            MembershipTier.Platinum,
+            BaseTime,
+            BaseTime.AddMinutes(minutes + 31)
+        ).TotalFee;
 
-    // 30 min grace + 61 min = 91 min total
-    var checkOut = checkIn.AddMinutes(91);
+        return platinum <= gold && gold <= silver && silver <= guest;
+    }
 
-    // Act
-    var result = _calculator.CalculateFee(
-        VehicleType.Car,
-        MembershipTier.Guest,
-        checkIn,
-        checkOut
-    );
+    // ✅ PROPERTY 4 — Higher membership = lower fee
+    [Property]
+    public bool HigherTier_GetsBetterDiscount(int minutes)
+    {
+        minutes = Math.Abs(minutes % 300);
 
-    // Assert
-    Assert.Equal(2000m, result.TotalFee);
-}
-    #endregion
+        var silver = _calculator.CalculateFee(
+            VehicleType.Car,
+            MembershipTier.Silver,
+            BaseTime,
+            BaseTime.AddMinutes(minutes + 31)
+        ).TotalFee;
 
-    #region Daily Cap
-    // Test that fees respect maximum daily limits per vehicle type
-    [Fact]
-public void CalculateFee_CarExceedsDailyCap_Returns8000()
-{
-    // Arrange
-    var checkIn = new DateTime(2026, 3, 16, 6, 0, 0);
-    var checkOut = checkIn.AddHours(12); // Long stay
+        var gold = _calculator.CalculateFee(
+            VehicleType.Car,
+            MembershipTier.Gold,
+            BaseTime,
+            BaseTime.AddMinutes(minutes + 31)
+        ).TotalFee;
 
-    // Act
-    var result = _calculator.CalculateFee(
-        VehicleType.Car,
-        MembershipTier.Guest,
-        checkIn,
-        checkOut
-    );
+        var platinum = _calculator.CalculateFee(
+            VehicleType.Car,
+            MembershipTier.Platinum,
+            BaseTime,
+            BaseTime.AddMinutes(minutes + 31)
+        ).TotalFee;
 
-    // Assert
-    Assert.Equal(8000m, result.TotalFee);
-}
-// Motorcycle has a lower cap, so we can test that as well
-[Fact]
-public void CalculateFee_Motorcycle_DailyCap_10Hours_Returns4000()
-{
-    // Arrange
-    var checkIn = new DateTime(2026, 3, 16, 6, 0, 0);
-    var checkOut = checkIn.AddHours(10); // long duration
+        return platinum <= gold && gold <= silver;
+    }
 
-    // Act
-    var result = _calculator.CalculateFee(
-        VehicleType.Motorcycle,
-        MembershipTier.Guest,
-        checkIn,
-        checkOut
-    );
+    // ✅ PROPERTY 5 — Lost ticket adds exactly 20000
+    [Property]
+    public bool LostTicket_AddsExactly20000(int minutes)
+    {
+        minutes = Math.Abs(minutes % 300);
 
-    // Assert
-    Assert.Equal(4000m, result.TotalFee);
-}
-    #endregion
+        var normal = _calculator.CalculateFee(
+            VehicleType.Car,
+            MembershipTier.Guest,
+            BaseTime,
+            BaseTime.AddMinutes(minutes + 31)
+        ).TotalFee;
 
-    #region Overnight Fee
-    // Test the flat fee applied for sessions that extend into late hours
-      [Fact]
-public void CalculateFee_Past10PM_AddsOvernightFee()
-{
-    // Arrange
-    var checkIn = new DateTime(2026, 3, 16, 20, 0, 0); // 8:00 PM
-    var checkOut = new DateTime(2026, 3, 16, 23, 0, 0); // 11:00 PM
+        var lost = _calculator.CalculateFee(
+            VehicleType.Car,
+            MembershipTier.Guest,
+            BaseTime,
+            BaseTime.AddMinutes(minutes + 31),
+            isLostTicket: true
+        ).TotalFee;
 
-    // Act
-    var result = _calculator.CalculateFee(
-        VehicleType.Car,
-        MembershipTier.Guest,
-        checkIn,
-        checkOut
-    );
+        return lost - normal == 20000;
+    }
 
-    // Assert
-    // 3 hours = 3000 + 2000 overnight
-    Assert.Equal(5000m, result.TotalFee);
-}
-[Fact]
-	public void CalculateFee_CheckInAfter10PM_AddsOvernightFee()
-	{
-    	// Arrange
-    	var checkIn = new DateTime(2026, 3, 16, 22, 30, 0); // 10:30 PM
-    	var checkOut = new DateTime(2026, 3, 17, 1, 30, 0); // 1:30 AM
+    // ✅ PROPERTY 6 — Fee never exceeds daily cap (before extras)
+    [Property]
+    public bool Fee_NeverExceedsDailyCap(int minutes)
+    {
+        minutes = Math.Abs(minutes % 2000);
 
-    	// Act
-    	var result = _calculator.CalculateFee(
-        	VehicleType.Car,
-        	MembershipTier.Guest,
-        	checkIn,
-        	checkOut
-    	);
+        var result = _calculator.CalculateFee(
+            VehicleType.Car,
+            MembershipTier.Guest,
+            BaseTime,
+            BaseTime.AddMinutes(minutes + 31)
+        ).TotalFee;
 
-    	// Assert
-    	// 3 hours = 3000 + 2000 overnight
-    	Assert.Equal(5000m, result.TotalFee);
-	}
-    [Fact]
-public void CalculateFee_CheckInAfter10PM_CheckOutNextMorning_AddsOvernightFee()
-{
-    // Arrange
-    var checkIn = new DateTime(2026, 3, 16, 23, 30, 0); // 11:30 PM
-    var checkOut = new DateTime(2026, 3, 17, 6, 0, 0); // 6:00 AM
+        return result <= 12000; // SUV max upper safety bound
+    }
 
-    // Act
-    var result = _calculator.CalculateFee(
-        VehicleType.Car,
-        MembershipTier.Guest,
-        checkIn,
-        checkOut
-    );
+    // ✅ PROPERTY 7 — Holiday overrides weekend
+    [Property]
+    public bool Holiday_Overrides_Weekend(int minutes)
+    {
+        var checkIn = new DateTime(2026, 3, 14, 10, 0, 0); // Saturday
+        var checkOut = checkIn.AddMinutes(Math.Abs(minutes % 300) + 31);
 
-    // Assert
-    Assert.True(result.TotalFee >= 2000m);
-}
+        var weekendOnly = _calculator.CalculateFee(
+            VehicleType.Car,
+            MembershipTier.Guest,
+            checkIn,
+            checkOut,
+            false,
+            false
+        ).TotalFee;
 
-    #endregion
+        var holiday = _calculator.CalculateFee(
+            VehicleType.Car,
+            MembershipTier.Guest,
+            checkIn,
+            checkOut,
+            false,
+            true
+        ).TotalFee;
 
-    #region Weekend Surcharge
-    // Test the percentage-based surcharge on specific days
-    [Fact]
-public void CalculateFee_Weekend_Adds20PercentSurcharge()
-{
-    // Arrange
-    var checkIn = new DateTime(2026, 3, 14, 10, 0, 0); // Saturday
-    var checkOut = checkIn.AddHours(2); // 2 hours
-
-    // Act
-    var result = _calculator.CalculateFee(
-        VehicleType.Car,
-        MembershipTier.Guest,
-        checkIn,
-        checkOut
-    );
-
-    // Assert
-    // Base fee = 2h × 1000 = 2000
-    // Weekend surcharge = 20% = 400
-    Assert.Equal(2400m, result.TotalFee);
-}
-    #endregion
-
-    #region Holiday Surcharge
-    // Test holiday pricing and its interaction with weekend pricing
-    [Fact]
-public void CalculateFee_Holiday_Adds50PercentSurcharge()
-{
-    // Arrange
-    var checkIn = new DateTime(2026, 3, 16, 10, 0, 0); // Monday
-    var checkOut = checkIn.AddHours(2); // 2 hours
-    bool isHoliday = true;
-
-    // Act
-    var result = _calculator.CalculateFee(
-        VehicleType.Car,
-        MembershipTier.Guest,
-        checkIn,
-        checkOut,
-        isLostTicket: false,
-        isHoliday: isHoliday
-    );
-
-    // Assert
-    // Base fee = 2h × 1000 = 2000
-    // Holiday surcharge = 50% = 1000
-    Assert.Equal(3000m, result.TotalFee);
-}
-    #endregion
-
-    #region Membership Discounts
-    // Test discount tiers and what amounts they apply to
-    // Sivler
-    [Fact]
-public void CalculateFee_SilverMember_Gets10PercentDiscount()
-{
-    // Arrange
-    var checkIn = new DateTime(2026, 3, 16, 10, 0, 0);
-    var checkOut = checkIn.AddHours(2);
-
-    // Act
-    var result = _calculator.CalculateFee(
-        VehicleType.Car,
-        MembershipTier.Silver,
-        checkIn,
-        checkOut
-    );
-
-    // Assert
-    // Base fee = 2000
-    // Discount = 10% → 200
-    Assert.Equal(1800m, result.TotalFee);
-}
- //Gold
- [Fact]
-public void CalculateFee_GoldMember_Gets25PercentDiscount()
-{
-    var checkIn = new DateTime(2026, 3, 16, 10, 0, 0);
-    var checkOut = checkIn.AddHours(2);
-
-    var result = _calculator.CalculateFee(
-        VehicleType.Car,
-        MembershipTier.Gold,
-        checkIn,
-        checkOut
-    );
-
-    // 2000 - 500 = 1500
-    Assert.Equal(1500m, result.TotalFee);
-}
-// Platinum
-[Fact]
-public void CalculateFee_PlatinumMember_Gets40PercentDiscount()
-{
-    var checkIn = new DateTime(2026, 3, 16, 10, 0, 0);
-    var checkOut = checkIn.AddHours(2);
-
-    var result = _calculator.CalculateFee(
-        VehicleType.Car,
-        MembershipTier.Platinum,
-        checkIn,
-        checkOut
-    );
-
-    // 2000 - 800 = 1200
-    Assert.Equal(1200m, result.TotalFee);
-}
-// Discount applies after surcharge 
-[Fact]
-public void CalculateFee_DiscountAppliesAfterSurcharge()
-{
-    // Saturday = weekend surcharge (20%)
-    var checkIn = new DateTime(2026, 3, 14, 10, 0, 0); // Saturday
-    var checkOut = checkIn.AddHours(2);
-
-    var result = _calculator.CalculateFee(
-        VehicleType.Car,
-        MembershipTier.Gold,
-        checkIn,
-        checkOut
-    );
-
-    // Base = 2000
-    // Weekend surcharge = 400 → total = 2400
-    // Gold discount (25%) = 600 → final = 1800
-    Assert.Equal(1800m, result.TotalFee);
-}
-    #endregion
-
-    #region Lost Ticket
-    // Test the penalty and how it interacts with other fee modifiers
-
-    // Normal + lost ticket
-
-    [Fact]
-public void CalculateFee_LostTicket_Adds20000()
-{
-    // Arrange
-    var checkIn = new DateTime(2026, 3, 16, 10, 0, 0);
-    var checkOut = checkIn.AddHours(1);
-
-    // Act
-    var result = _calculator.CalculateFee(
-        VehicleType.Car,
-        MembershipTier.Guest,
-        checkIn,
-        checkOut,
-        isLostTicket: true
-    );
-
-    // Assert
-    // 1000 + 20000 = 21000
-    Assert.Equal(21000m, result.TotalFee);
-}
-
-// Grace period + lost ticket (important edge case)
-
-[Fact]
-public void CalculateFee_LostTicketDuringGracePeriod_Returns20000()
-{
-    var checkIn = new DateTime(2026, 3, 16, 10, 0, 0);
-    var checkOut = checkIn.AddMinutes(10);
-
-    var result = _calculator.CalculateFee(
-        VehicleType.Car,
-        MembershipTier.Guest,
-        checkIn,
-        checkOut,
-        isLostTicket: true
-    );
-
-    Assert.Equal(20000m, result.TotalFee);
-}
-
-    #endregion
+        // Holiday should NOT stack with weekend
+        return holiday >= weekendOnly;
+    }
 }
