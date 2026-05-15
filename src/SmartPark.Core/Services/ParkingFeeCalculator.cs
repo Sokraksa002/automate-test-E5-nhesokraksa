@@ -43,6 +43,17 @@ public class ParkingFeeCalculator
         var billableMinutes = totalMinutes - GracePeriodMinutes;
         var billableHours = Math.Ceiling(billableMinutes / 60.0);
         decimal totalFee = (decimal)billableHours * CarRatePerHour;
+        
+
+        decimal rate = vehicleType switch
+        {
+            VehicleType.Motorcycle => 500m,
+            VehicleType.Car => 1000m,
+            VehicleType.Suv => 1500m
+        };
+
+        decimal totalFee = (decimal)billableHours * rate;
+
 
         // 4. Daily cap
         if (totalFee > CarDailyCap)

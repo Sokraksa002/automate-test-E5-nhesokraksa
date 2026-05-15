@@ -118,6 +118,25 @@ public void CalculateFee_CarExceedsDailyCap_Returns8000()
     // Assert
     Assert.Equal(8000m, result.TotalFee);
 }
+// Motorcycle has a lower cap, so we can test that as well
+[Fact]
+public void CalculateFee_Motorcycle_DailyCap_10Hours_Returns4000()
+{
+    // Arrange
+    var checkIn = new DateTime(2026, 3, 16, 6, 0, 0);
+    var checkOut = checkIn.AddHours(10); // long duration
+
+    // Act
+    var result = _calculator.CalculateFee(
+        VehicleType.Motorcycle,
+        MembershipTier.Guest,
+        checkIn,
+        checkOut
+    );
+
+    // Assert
+    Assert.Equal(4000m, result.TotalFee);
+}
     #endregion
 
     #region Overnight Fee
@@ -356,14 +375,5 @@ public void CalculateFee_LostTicketDuringGracePeriod_Returns20000()
     Assert.Equal(20000m, result.TotalFee);
 }
 
-    #endregion
-
-    #region Edge Cases
-    // Test invalid inputs and boundary conditions
-    #endregion
-
-    #region Property-Based Tests
-    // Write at least 5 FsCheck properties that must hold for ALL valid inputs
-    // You may need custom Arbitrary<T> for generating valid DateTime pairs
     #endregion
 }
