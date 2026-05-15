@@ -76,6 +76,11 @@ public class ParkingFeeCalculator
         };
     }
 
+    if ((checkOut - checkIn).TotalMinutes <= 30)
+{
+    return new ParkingFeeResult { TotalFee = 0m };
+}
+
     // Temporary placeholder for future TDD steps
     throw new NotImplementedException();
 }
