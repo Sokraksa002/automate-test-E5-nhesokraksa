@@ -8,6 +8,7 @@ public class ParkingFeeCalculator
     private const decimal CarRatePerHour = 1000m;
     private const decimal CarDailyCap = 8000m;
     private const decimal OvernightFee = 2000m;
+    private const int OvernightHourThreshold = 22;
 
     public ParkingFeeResult CalculateFee(
         VehicleType vehicleType,
@@ -42,7 +43,8 @@ public class ParkingFeeCalculator
         }
 
         // 6. Overnight fee
-        if (checkOut.Hour >= 22 || checkIn.Hour >= 22)
+        if (checkIn.Hour >= OvernightHourThreshold ||
+            checkOut.Hour >= OvernightHourThreshold)
         {
             totalFee += OvernightFee;
         }

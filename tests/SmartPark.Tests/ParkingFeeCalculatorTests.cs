@@ -141,6 +141,44 @@ public void CalculateFee_Past10PM_AddsOvernightFee()
     // 3 hours = 3000 + 2000 overnight
     Assert.Equal(5000m, result.TotalFee);
 }
+[Fact]
+	public void CalculateFee_CheckInAfter10PM_AddsOvernightFee()
+	{
+    	// Arrange
+    	var checkIn = new DateTime(2026, 3, 16, 22, 30, 0); // 10:30 PM
+    	var checkOut = new DateTime(2026, 3, 17, 1, 30, 0); // 1:30 AM
+
+    	// Act
+    	var result = _calculator.CalculateFee(
+        	VehicleType.Car,
+        	MembershipTier.Guest,
+        	checkIn,
+        	checkOut
+    	);
+
+    	// Assert
+    	// 3 hours = 3000 + 2000 overnight
+    	Assert.Equal(5000m, result.TotalFee);
+	}
+    [Fact]
+public void CalculateFee_CheckInAfter10PM_CheckOutNextMorning_AddsOvernightFee()
+{
+    // Arrange
+    var checkIn = new DateTime(2026, 3, 16, 23, 30, 0); // 11:30 PM
+    var checkOut = new DateTime(2026, 3, 17, 6, 0, 0); // 6:00 AM
+
+    // Act
+    var result = _calculator.CalculateFee(
+        VehicleType.Car,
+        MembershipTier.Guest,
+        checkIn,
+        checkOut
+    );
+
+    // Assert
+    Assert.True(result.TotalFee >= 2000m);
+}
+
     #endregion
 
     #region Weekend Surcharge
