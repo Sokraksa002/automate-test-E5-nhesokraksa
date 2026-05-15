@@ -313,6 +313,49 @@ public void CalculateFee_DiscountAppliesAfterSurcharge()
 
     #region Lost Ticket
     // Test the penalty and how it interacts with other fee modifiers
+
+    // Normal + lost ticket
+
+    [Fact]
+public void CalculateFee_LostTicket_Adds20000()
+{
+    // Arrange
+    var checkIn = new DateTime(2026, 3, 16, 10, 0, 0);
+    var checkOut = checkIn.AddHours(1);
+
+    // Act
+    var result = _calculator.CalculateFee(
+        VehicleType.Car,
+        MembershipTier.Guest,
+        checkIn,
+        checkOut,
+        isLostTicket: true
+    );
+
+    // Assert
+    // 1000 + 20000 = 21000
+    Assert.Equal(21000m, result.TotalFee);
+}
+
+// Grace period + lost ticket (important edge case)
+
+[Fact]
+public void CalculateFee_LostTicketDuringGracePeriod_Returns20000()
+{
+    var checkIn = new DateTime(2026, 3, 16, 10, 0, 0);
+    var checkOut = checkIn.AddMinutes(10);
+
+    var result = _calculator.CalculateFee(
+        VehicleType.Car,
+        MembershipTier.Guest,
+        checkIn,
+        checkOut,
+        isLostTicket: true
+    );
+
+    Assert.Equal(20000m, result.TotalFee);
+}
+
     #endregion
 
     #region Edge Cases
