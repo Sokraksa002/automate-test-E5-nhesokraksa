@@ -76,6 +76,26 @@ public void CalculateFee_GracePeriod_31Minutes_ReturnsOneHourFee()
 
     #region Duration Rounding
     // Test how partial hours are rounded for billing
+    [Fact]
+public void CalculateFee_RoundingUp_ReturnsTwoHours()
+{
+    // Arrange
+    var checkIn = new DateTime(2026, 3, 16, 10, 0, 0);
+
+    // 30 min grace + 61 min = 91 min total
+    var checkOut = checkIn.AddMinutes(91);
+
+    // Act
+    var result = _calculator.CalculateFee(
+        VehicleType.Car,
+        MembershipTier.Guest,
+        checkIn,
+        checkOut
+    );
+
+    // Assert
+    Assert.Equal(2000m, result.TotalFee);
+}
     #endregion
 
     #region Daily Cap
