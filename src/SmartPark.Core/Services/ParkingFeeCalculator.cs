@@ -10,6 +10,7 @@ public class ParkingFeeCalculator
     private const decimal OvernightFee = 2000m;
     private const int OvernightHourThreshold = 22;
     private const decimal WeekendSurchargeRate = 0.20m;
+    private const decimal HolidaySurchargeRate = 0.50m;
 
     public ParkingFeeResult CalculateFee(
         VehicleType vehicleType,
@@ -50,9 +51,13 @@ public class ParkingFeeCalculator
             totalFee += OvernightFee;
         }
 
-        // 7. Weekend surcharge (20%)
-        if (checkIn.DayOfWeek == DayOfWeek.Saturday ||
-            checkIn.DayOfWeek == DayOfWeek.Sunday)
+        // 7. Surcharge (IMPORTANT: holiday overrides weekend)
+        if (isHoliday)
+        {
+            totalFee += totalFee * HolidaySurchargeRate;
+        }
+        else if (checkIn.DayOfWeek == DayOfWeek.Saturday ||
+                 checkIn.DayOfWeek == DayOfWeek.Sunday)
         {
             totalFee += totalFee * WeekendSurchargeRate;
         }
