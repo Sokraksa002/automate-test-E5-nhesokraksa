@@ -54,6 +54,24 @@ public void CalculateFee_GracePeriod_30Minutes_ReturnsFree()
 	// Assert
 	Assert.Equal(0m, result.TotalFee);
 }
+[Fact]
+public void CalculateFee_GracePeriod_31Minutes_ReturnsOneHourFee()
+{
+    // Arrange
+    var checkIn = new DateTime(2026, 3, 16, 10, 0, 0);
+    var checkOut = checkIn.AddMinutes(31);
+
+    // Act
+    var result = _calculator.CalculateFee(
+        VehicleType.Car,
+        MembershipTier.Guest,
+        checkIn,
+        checkOut
+    );
+
+    // Assert
+    Assert.Equal(1000m, result.TotalFee);
+}
     #endregion
 
     #region Duration Rounding
