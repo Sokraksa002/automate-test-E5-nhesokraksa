@@ -234,6 +234,81 @@ public void CalculateFee_Holiday_Adds50PercentSurcharge()
 
     #region Membership Discounts
     // Test discount tiers and what amounts they apply to
+    // Sivler
+    [Fact]
+public void CalculateFee_SilverMember_Gets10PercentDiscount()
+{
+    // Arrange
+    var checkIn = new DateTime(2026, 3, 16, 10, 0, 0);
+    var checkOut = checkIn.AddHours(2);
+
+    // Act
+    var result = _calculator.CalculateFee(
+        VehicleType.Car,
+        MembershipTier.Silver,
+        checkIn,
+        checkOut
+    );
+
+    // Assert
+    // Base fee = 2000
+    // Discount = 10% → 200
+    Assert.Equal(1800m, result.TotalFee);
+}
+ //Gold
+ [Fact]
+public void CalculateFee_GoldMember_Gets25PercentDiscount()
+{
+    var checkIn = new DateTime(2026, 3, 16, 10, 0, 0);
+    var checkOut = checkIn.AddHours(2);
+
+    var result = _calculator.CalculateFee(
+        VehicleType.Car,
+        MembershipTier.Gold,
+        checkIn,
+        checkOut
+    );
+
+    // 2000 - 500 = 1500
+    Assert.Equal(1500m, result.TotalFee);
+}
+// Platinum
+[Fact]
+public void CalculateFee_PlatinumMember_Gets40PercentDiscount()
+{
+    var checkIn = new DateTime(2026, 3, 16, 10, 0, 0);
+    var checkOut = checkIn.AddHours(2);
+
+    var result = _calculator.CalculateFee(
+        VehicleType.Car,
+        MembershipTier.Platinum,
+        checkIn,
+        checkOut
+    );
+
+    // 2000 - 800 = 1200
+    Assert.Equal(1200m, result.TotalFee);
+}
+// Discount applies after surcharge 
+[Fact]
+public void CalculateFee_DiscountAppliesAfterSurcharge()
+{
+    // Saturday = weekend surcharge (20%)
+    var checkIn = new DateTime(2026, 3, 14, 10, 0, 0); // Saturday
+    var checkOut = checkIn.AddHours(2);
+
+    var result = _calculator.CalculateFee(
+        VehicleType.Car,
+        MembershipTier.Gold,
+        checkIn,
+        checkOut
+    );
+
+    // Base = 2000
+    // Weekend surcharge = 400 → total = 2400
+    // Gold discount (25%) = 600 → final = 1800
+    Assert.Equal(1800m, result.TotalFee);
+}
     #endregion
 
     #region Lost Ticket
