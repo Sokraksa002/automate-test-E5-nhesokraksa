@@ -100,6 +100,24 @@ public void CalculateFee_RoundingUp_ReturnsTwoHours()
 
     #region Daily Cap
     // Test that fees respect maximum daily limits per vehicle type
+    [Fact]
+public void CalculateFee_CarExceedsDailyCap_Returns8000()
+{
+    // Arrange
+    var checkIn = new DateTime(2026, 3, 16, 6, 0, 0);
+    var checkOut = checkIn.AddHours(12); // Long stay
+
+    // Act
+    var result = _calculator.CalculateFee(
+        VehicleType.Car,
+        MembershipTier.Guest,
+        checkIn,
+        checkOut
+    );
+
+    // Assert
+    Assert.Equal(8000m, result.TotalFee);
+}
     #endregion
 
     #region Overnight Fee
