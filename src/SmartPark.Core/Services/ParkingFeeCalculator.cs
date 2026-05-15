@@ -6,6 +6,7 @@ public class ParkingFeeCalculator
 {
     private const int GracePeriodMinutes = 30;
     private const decimal CarRatePerHour = 1000m;
+    private const decimal CarDailyCap = 8000m;
 
     public ParkingFeeResult CalculateFee(
         VehicleType vehicleType,
@@ -35,9 +36,17 @@ public class ParkingFeeCalculator
         var billableMinutes = totalMinutes - GracePeriodMinutes;
         var billableHours = Math.Ceiling(billableMinutes / 60.0);
 
+        decimal totalFee = (decimal)billableHours * CarRatePerHour;
+
+        // 5. Daily cap
+        if (totalFee > CarDailyCap)
+        {
+            totalFee = CarDailyCap;
+        }
+
         return new ParkingFeeResult
         {
-            TotalFee = (decimal)billableHours * CarRatePerHour
+            TotalFee = totalFee
         };
     }
 }
