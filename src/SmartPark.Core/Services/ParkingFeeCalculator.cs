@@ -5,6 +5,7 @@ namespace SmartPark.Core.Services;
 public class ParkingFeeCalculator
 {
     private const int GracePeriodMinutes = 30;
+    private const decimal CarRatePerHour = 1000m;
 
     public ParkingFeeResult CalculateFee(
         VehicleType vehicleType,
@@ -18,18 +19,10 @@ public class ParkingFeeCalculator
         if (checkOut < checkIn)
             throw new ArgumentException();
 
-        // 2. Zero duration
-        if (checkOut == checkIn)
-        {
-            return new ParkingFeeResult
-            {
-                TotalFee = 0m
-            };
-        }
-
-        // 3. Grace period (≤ 30 minutes)
+        // 2. Calculate total duration
         var totalMinutes = (checkOut - checkIn).TotalMinutes;
 
+        // 3. Grace period (includes zero duration)
         if (totalMinutes <= GracePeriodMinutes)
         {
             return new ParkingFeeResult
@@ -38,10 +31,13 @@ public class ParkingFeeCalculator
             };
         }
 
-        // 4. First billable hour (31 minutes)
+        // 4. Duration rounding
+        var billableMinutes = totalMinutes - GracePeriodMinutes;
+        var billableHours = Math.Ceiling(billableMinutes / 60.0);
+
         return new ParkingFeeResult
         {
-            TotalFee = 1000m
+            TotalFee = (decimal)billableHours * CarRatePerHour
         };
     }
 }
