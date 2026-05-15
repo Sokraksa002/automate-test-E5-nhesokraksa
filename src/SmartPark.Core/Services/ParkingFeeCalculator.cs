@@ -9,6 +9,7 @@ public class ParkingFeeCalculator
     private const decimal CarDailyCap = 8000m;
     private const decimal OvernightFee = 2000m;
     private const int OvernightHourThreshold = 22;
+    private const decimal WeekendSurchargeRate = 0.20m;
 
     public ParkingFeeResult CalculateFee(
         VehicleType vehicleType,
@@ -47,6 +48,13 @@ public class ParkingFeeCalculator
             checkOut.Hour >= OvernightHourThreshold)
         {
             totalFee += OvernightFee;
+        }
+
+        // 7. Weekend surcharge (20%)
+        if (checkIn.DayOfWeek == DayOfWeek.Saturday ||
+            checkIn.DayOfWeek == DayOfWeek.Sunday)
+        {
+            totalFee += totalFee * WeekendSurchargeRate;
         }
 
         return new ParkingFeeResult
