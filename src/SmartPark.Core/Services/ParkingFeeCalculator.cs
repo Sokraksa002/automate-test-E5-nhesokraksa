@@ -26,11 +26,18 @@ public class ParkingFeeCalculator
 
         var totalMinutes = (checkOut - checkIn).TotalMinutes;
 
+        
         // 2. Grace period
         if (totalMinutes <= GracePeriodMinutes)
         {
-            return new ParkingFeeResult { TotalFee = 0m };
+            if (isLostTicket)
+            {
+                return new ParkingFeeResult { TotalFee = 20000m };
+            }
+
+                return new ParkingFeeResult { TotalFee = 0m };
         }
+
 
         // 3. Duration rounding
         var billableMinutes = totalMinutes - GracePeriodMinutes;
@@ -61,17 +68,21 @@ public class ParkingFeeCalculator
             totalFee += totalFee * WeekendSurchargeRate;
         }
 
-        //  7. Membership discount (FIXED position)
+        // 7. Membership discount
         decimal discountRate = membership switch
         {
             MembershipTier.Silver => 0.10m,
             MembershipTier.Gold => 0.25m,
             MembershipTier.Platinum => 0.40m,
-            _ => 0m
-        };
+            _           => 0m
+        };  
 
         decimal discount = totalFee * discountRate;
         totalFee -= discount;
+
+        //  8. Lost ticket penalty (NOT discounted)
+        decimal penalty = isLostTicket ? 20000m : 0m;
+        totalFee += penalty;
 
         return new ParkingFeeResult
         {
